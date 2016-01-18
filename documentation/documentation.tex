@@ -32,6 +32,7 @@ columns=fullflexible, numbers=left, numberstyle=\tiny\color{lightgray}, frame=si
 \title{Testing Automation in an Embedded Linux Project}
 \author{
 	Topi Kuutela\\
+	Erkka Kääriä
 }
 \maketitle
 
@@ -78,11 +79,11 @@ The content was bundled together during the creation of this document, in Decemb
 In the testing automation system SSH-keys are used extensively for authentication. A default SSH-key is included in the testing automation USB-key in folders \cmd{gigabyte} and \cmd{minnowboard}. Additionally, the SSH-key is added to the \cmd{\/root\/.ssh} folder in each pre-made Debian image. \textbf{It is highly recommended that these SSH-keys are replaced with your own ones!} Leaving the default keys in place may expose your system to attacks.
 
 \subsection{Foreword}
-This document was originally written over November and December 2015 to relay information regarding testing automation setup in an embedded Linux project. The level of detail is intentionally high to allow the next operator to understand all details of the system.
+This document was originally written by Topi Kuutela over November and December 2015 to relay information regarding testing automation setup in an embedded Linux project. The level of detail is intentionally high to allow the next operator to understand all details of the system. 
 
 This document covers the configuration and construction instructions only for the testing automation part of the continuous integration system used in the project. The testing automation subsystem is not coupled to the build infrastructure other than by the image transmission.
 
-In the first section the configuration and installation of the testing harness, the testing server, is covered. In the second and third sections the usage of the most important pieces of software are detailed. In section 5 the different kinds of power cutter devices are explained and their associated software is explained. In sections 6-9 the individual testing platforms are described. Finally, in the appendices, the AFT implementation details and privilege reduction options are explained.
+In the first section the configuration and installation of the testing harness, the testing server, is covered. In the second and third sections the usage of the most important pieces of software are detailed. In section 5 the different kinds of power cutter devices are explained and their associated software is explained. In sections 6-10 the individual testing platforms are described. Finally, in the appendices, the AFT implementation details and privilege reduction options are explained.
 
 \section{Testing harness}
 \label{testingharness}
@@ -461,6 +462,44 @@ See the comments on the test automation USB-stick \cmd{gigabyte/installgigabyte}
 
 \item Reboot the device, adjust the boot priorities so that the primary options are from the testable image.
 \end{enumerate}
+
+\subsection{Flashing the BIOS on Gigabyte}
+Out of the box, Gigabyte comes with a 32-bit BIOS. This means that the EFI-stub also has to be 32-bit (which, still, can load a 64-bit OS). This can be fixed by updating the BIOS to a 64-bit version, which is supplied by Intel.
+
+The testing automation USB-stick contains all the files required to update the BIOS to version \cmd{F2a x64} in the folder gigabytebios. The official instructions are available at \url{https://wiki.ith.intel.com/display/TME/ODM+Gateway+BIOS+Files}.
+
+The following instructions assume that you have copied the latest version to the USB-stick.
+
+\begin{enumerate}
+
+\item Plug the USB-stick to the Gigabyte. Reboot the device, enter BIOS and set the first boot device to UEFI: Built-in EFI Shell.
+
+\item In EFI Shell, first select the correct device from the Device mapping table. The most likely candidate for the USB-key is \cmd{fs0}:
+\begin{lstlisting}
+fs0:
+\end{lstlisting}
+\note the keyboard uses the US-layout.
+
+\item go to the \cmd{gigabytebios} folder:
+
+\begin{lstlisting}
+cd gigabytebios
+\end{lstlisting}
+
+\item Execute the flashing. If the \textit{current} BIOS is 32-bit use \cmd{fpt}, or if the current BIOS is 64-bit use \cmd{fpt64}.
+
+\begin{lstlisting}
+fpt64 -f BAYADx64.F2a
+\end{lstlisting}
+
+\item After the flashing is completed, reboot the device by issuing:
+\begin{lstlisting}
+reset
+\end{lstlisting}
+\note flashing the BIOS resets the BIOS settings. Remember to disable secure boot and set the device to power on after AC power loss.
+
+\end{enumerate}
+
 
 \section{MinnowBoard MAX}
 \label{minnowboard}
@@ -893,6 +932,192 @@ The USB-serial interface can be used for boot console recording at 115200 bauds.
 	\caption{USB-power cutter cable.}
 	\label{fig:usbpower}
 \end{figure}
+
+\newpage
+\section{Beaglebone Black}
+Beaglebone Black is an open-source hardware development board with a 32-bit 1GHz Cortex-A8 ARM CPU and 512 MB ram. The board also has two 200MHz 32-bit microcontrollers, which can be used to offload tasks from the main CPU. Depending on revision, it has either 2 gigabytes (rev B) or 4 gigabytes (rev C) of internal storage. It has microSD slot, A-type and mini USB ports, microHDMI connector for video and audio, 100 megabit ethernet and a 6-pin serial output. It can be powered through either mini-usb port or 5.5mm 5V jack.
+
+Beaglebone is a gadget-like device that uses U-boot for initialization. It however requires a support image for flashing due to the official flashing procedure requiring manual steps.
+
+\subsection{CI-integration}
+
+Todo.
+
+\subsection{Partitioning SD-card}
+
+AFT assumes that the SD-card is partitioned properly and that the partitions have the correct file systems. When adding a new device, or replacing old SD-card, the SD-card must have at least two partitions: 64 megabyte boot partition and at least 4 gigabyte root partition.
+
+These following steps use fdisk, but any partitioning software will do.
+
+\begin{enumerate}
+
+\item Verify that the card is unmounted
+
+\item Run fdisk on the SD-card
+
+\begin{lstlisting}
+sudo fdisk /dev/sdX
+\end{lstlisting} 
+
+where \cmd{/dev/sdX} is the device file for your SD-card. This can be found by using e.g. lsblk.
+
+\item Use the following commands to partition the card:
+
+\begin{lstlisting}
+o  -- creates new dos partition table
+n  -- add new partition
+enter  -- use default (primary partition)
+enter  -- use default (first partition)
+enter  -- use default (default starting position)
++64M -- set partition size as 64 megabytes
+a -- set first partition as bootable
+n -- add new partition
+enter -- use default (primary partition)
+enter -- use default (second partition)
+enter -- use default (defautl starting position
+enter -- use default (any remaining space is added to the partition)
+t -- change partition type
+1 -- first partition (boot)
+6 -- Fat16 partition
+t -- change partition t
+2 -- second partition (root)
+83 -- Linux partition
+\end{lstlisting}
+
+After these steps, the SD-card should be partitioned correctly. You can verify this by pressing \cmd{p} to print the partition table. It should look something like this:
+
+\begin{tabular}{c c c c c c c c}
+Device & Boot & Start & End & Sectors & Size & Id & Type \\
+/dev/sdb1  & * & 2048 & 133119 & 131072 & 64M & 6 & FAT16 \\
+/dev/sdb2  &   & 133120 & 15130623 & 14997504 & 7,2G & 83 & Linux \\
+\end{tabular}
+
+If the partition table looks correct, you can write the results by entering \cmd{w}. You may need to run partprobe so that the kernel sees the new partitions.
+
+\end{enumerate}
+
+
+After the disk has been partitioned, file systems must be created on the card
+
+\begin{lstlisting}
+sudo mkfs.fat /dev/sdX1
+sudo mkfs.ext4 /dev/sdX2
+\end{lstlisting}
+
+Where \cmd{/dev/sdX} once again is the SD-card device file
+
+\subsection{Debian for Beaglebone Black}
+
+Unlike other devices, Beaglebone Black uses its support image over nfs. This is due to an effort to minimize single point of failures, as USB-sticks have been known to fail due to frequent power cuts. 
+
+The following steps can be run on either personal computer or the testing harness, as long as the resulting root filesystem directory is copied to testing harness with appropriate ownership. The steps however assume that the commands are run on the testing harness as root. Adjust paths and add sudos when necessary.
+
+
+\begin{enumerate}
+\item Download Debian 8.2 "Jessie" image from \url{http://www.beagleboard.org}.
+
+\note Newer images should work as well, but some of the following steps might be inaccurate.
+
+\item Extract the root filesystem from the image file
+\begin{lstlisting}
+mount -o loop,offset=101711872 bone-debian-8.2-tester-2gb-armhf-2015-11-12-2gb.img temp/
+cp -R temp/* /home/tester/support_fs/beaglebone/
+umount temp
+\end{lstlisting}
+
+\note The offset can be calculated by opening the image file with fdisk, printing the partition table and then multiplying the starting position by sector size
+
+\item Remove connman service
+
+Connman service resets the ip during boot process, which causes the boot to fail as connection to nfs server is lost.
+
+
+\begin{lstlisting}
+rm /home/tester/support_fs/beaglebone/etc/systemd/system/multi-user.target.wants/connman.service
+\end{lstlisting}
+
+\note It may also be necessary to remove connman symlinks from \cmd{etc/rd?.d} folders, where ? is a number.
+
+
+\item Add ssh keys to the image
+
+\begin{lstlisting}
+mkdir /home/tester/support_fs/beaglebone/root/.ssh
+cp id_rsa_testing_harness.pub /home/tester/support_fs/beaglebone/root/.ssh/authorized_keys
+chmod 700 /home/tester/support_fs/beaglebone/root/.ssh
+chmod 600 /home/tester/support_fs/beaglebone/root/.ssh/authorized_keys
+\end{lstlisting}
+
+
+\item Change ownership to nobody
+
+As the nfs uses root squash, root access is mapped to user 'nobody'.
+
+\begin{lstlisting}
+chown -R nobody:nobody /home/tester/support_fs/beaglebone
+\end{lstlisting}
+
+
+
+\item Add the following to \cmd{/etc/exports}
+
+\begin{lstlisting}
+/home/tester/support_fs 192.168.30.0/24(crossmnt,rw,sync,root_squash,no_subtree_check) 
+\end{lstlisting}
+
+\note \cmd{/etc/exports} is whitespace sensitive. Only add space between the direcory path and ip address.
+
+\item Make sure that the settings are updated by running the following command.
+
+\begin{lstlisting}
+exportfs -vr
+\end{lstlisting}
+
+\item Boot\ref{bbbboot} the support image once
+
+\note Running AFT once instead of booting the image is acceptable as well, as AFT will boot the support image. This is however slower as AFT will also perform flashing and testing.
+
+\item Remove the new export from \cmd{/etc/exports} and run the update command
+
+\end{enumerate}
+
+
+The change in \cmd{/etc/exports} changes the nfs from read-only to read/write. This allows the support os to write any configuration files and do whatever changes it needs. Without this step, at least the ssh service will fail to start. After one succesful run, the export can be removed so that the file system is read-only. This is recommended for security reasons.
+
+\subsection{Booting to the service mode}
+\label{bbbboot}
+
+
+
+\begin{enumerate}
+\item Open screen
+
+\begin{lstlisting}
+screen /dev/ttyUSBX 115200, -ixon,-ixoff
+\end{lstlisting}
+where \cmd{/dev/ttyUSBX} is the device file for the serial port.
+
+\item Power on the device
+
+\item Immediately after powering on the device, press any key on screen to interrupt the regular boot to enter u-boot console
+
+\item Enter the following commands to boot the device over nfs
+
+\begin{lstlisting}
+setenv autoload no
+dhcp
+setenv bootargs console=ttyO0,115200n8 root=/dev/nfs nfsroot=${serverip}:/home/tester/support_fs/beaglebone,vers=3 rw ip=${ipaddr}
+tftp 0x81000000 /home/tester/support_fs/beaglebone/boot/vmlinuz-4.1.12-ti-r29
+tftp 0x80000000 /home/tester/support_fs/beaglebone/boot/dtbs/4.1.12-ti-r29/am335x-boneblack.dtb
+bootz 0x81000000 - 0x80000000
+\end{lstlisting}
+
+\note You may need to modify the paths above if you use different installation location or support image
+
+\note 0x81000000 and 0x80000000 are the memory locations where the kernel and device tree binaries are downloaded. It is important that these do not overlap (e.g. 0x80000000 + device tree binary size must be smaller than 0x81000000). The memory addresses themselves are somewhat arbitrary, but they have been tested to work.
+
+\end{enumerate}
+
 
 \newpage
 \appendix
