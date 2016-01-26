@@ -6,6 +6,18 @@ import aft.errors as errors
 import aft.config as config
 from aft.devicesmanager import DevicesManager
 
+# temporary imports, remove
+from aft.cutters.clewarecutter import ClewareCutter
+from aft.cutters.usbrelay import Usbrelay
+from time import sleep
+from pem.main import main as pem_main
+import pprint
+import serial
+from aft.tools.misc import local_execute
+from aft.tools.misc import subprocess_killer
+from aft.devices.edisondevice import EdisonDevice
+import uuid
+
 def check_all(args):
     """
     Checks all the devices either fast or accurately.
@@ -17,8 +29,6 @@ def check_all(args):
     device 2 and vice versa), everything would appear to be ok during parallel
     testing as both devices would be powered on roughly at the same time.
     """
-
-
 
     if not args.topology:
         raise errors.AFTConfigurationError("Topology file must be specified")
@@ -85,8 +95,7 @@ def check_all_serial(args, configs):
 def get_device_args(args, config):
     device_args = args
     device_args.device = config["name"]
-    # heuristic for enabling recording: if device has serial_port specified
-    # -> record it
+    # if device has serial_port specified -> record it
     if "serial_port" in config["settings"]:
         device_args.record = True
     else:
@@ -200,13 +209,3 @@ def check(args):
     success = poweron_status[0] and connection_status[0] and poweroff_status[0] and serial_status[0]
 
     return (success, result)
-
-
-
-
-
-
-
-
-
-
