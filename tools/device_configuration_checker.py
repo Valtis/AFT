@@ -17,7 +17,10 @@ Module for device configuration check functionality.
 
 import os
 import logging
-from multiprocessing import Process, Queue
+import copy
+from Queue import Queue
+from threading import Thread
+
 import aft.errors as errors
 from aft.devicesmanager import DevicesManager
 
@@ -72,7 +75,7 @@ def check_all_parallel(args, configs):
             Success/Failure). Second parameter contains the result string.
     """
 
-    processes = []
+    threads = []
 
     return_values = Queue()
 
@@ -90,17 +93,22 @@ def check_all_parallel(args, configs):
         ret = check(args)
         queue.put((ret, args.device))
 
+
+    # IMPORTANT NOTE:
+    # Currently (at the time of writing), serial recorder is run in a separate
+    # python process, and killed with atexit-handler. These handlers are not
+    # called when Process is joined, so Threads must be used instead
     for dev_config in configs:
         device_args = _get_device_args(args, dev_config)
 
-        process = Process(
+        thread = Thread(
             target=check_wrapper,
             args=(device_args, return_values))
-        process.start()
-        processes.append(process)
+        thread.start()
+        threads.append(thread)
 
-    for process in processes:
-        process.join()
+    for thread in threads:
+        thread.join()
 
 
     success = True
@@ -149,7 +157,8 @@ def check_all_serial(args, configs):
 
 def _get_device_args(args, dev_config):
     """
-    Gets necessary device args from dev_config and assigns them to args object.
+    Gets necessary device args from dev_config and assigns them to a copy of
+    args object.
 
     Args:
         args (configuration object): Program command line arguments
@@ -160,14 +169,15 @@ def _get_device_args(args, dev_config):
         to match current device.
     """
 
-    args.device = dev_config["name"]
+    device_args = copy.deepcopy(args)
+    device_args.device = dev_config["name"]
     # if device has serial_port specified -> record it
     if "serial_port" in dev_config["settings"]:
-        args.record = True
+        device_args.record = True
     else:
-        args.record = False
+        device_args.record = False
 
-    return args
+    return device_args
 
 def _handle_result(check_result, device, success_status, result_string):
     """
