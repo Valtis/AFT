@@ -939,12 +939,48 @@ Beaglebone Black is an open-source hardware development board with a 32-bit 1GHz
 
 Beaglebone is a gadget-like device that uses U-boot for initialization. It however requires a support image for flashing due to the official flashing procedure requiring manual steps.
 
+\subsection{Preparing Beaglebone Black}
+
+By default, BeagleBone Black boots from the internal eMMC storage. However, if this bootloader is removed, BeagleBone will check the SD card for a bootloader. This allows the device to boot from the SD card, where the testable image will be stored.
+
+The following steps work, but are somewhat laborous. A better alternative would certainly be welcome.
+
+As the Beaglebone doesn't seem to expose its boot partition to host computer when connected, we need to connect to the device with either serial cable or over ssh, and remove the boot files.
+
+\begin{enumerate}
+
+\item Connect the Beaglebone Black to a computer with an USB cable. 
+
+\item Once BeagleBone Black has booted, a new network interface should show up under \cmd{ifconfig}.
+
+\item SSH into the device, using the network interface ip address plus one (e.g. if the interface ip is 192.168.7.1, device ip is 192.168.7.2) and user 'debian'. Password should be 'temppwd'.
+
+\note The default user/password might have changed after writing this. If this is the case, either find out the user and password, or connect to the device using serial cable and reboot the device. It should show the default user/password. At this point, you can continue using the serial connection rather than SSH connection,
+
+\item Destroy the partition by executing 
+
+\begin{lstlisting}
+dd if=/dev/zero of=/dev/mmcblk0 bs=4M count=10
+sync
+\end{lstlisting}
+
+This writes 40 megabytes worth of zeros into the eMMC, which should be more than enough to destroy the boot partition.
+
+\note If you have SD card connected, the eMMC should be \cmd{/dev/mmcblk1} instead of \cmd{/dev/mmcblk0}. It's best not to connect SD card at this point to avoid confusion
+
+\item Copy bootloader files into the SD card boot partition, or flash the SD card with an functioning image. The test automation USB stick should have the necessary bootloader files, but any valid bootloader should do. See \ref{part_sd} on how to partition the SD card correctly.
+
+\end{enumerate}
+
+\note In case a bad image ends up being flashed into the SD card, Beaglebone Black will fail to boot as no working bootloader is present. To fix this, flash the SD card with a working image.
+
+
 \subsection{CI-integration}
 
 Todo.
 
 \subsection{Partitioning SD-card}
-
+\label{part_sd}
 AFT assumes that the SD-card is partitioned properly and that the partitions have the correct file systems. When adding a new device, or replacing old SD-card, the SD-card must have at least two partitions: 64 megabyte boot partition and at least 4 gigabyte root partition.
 
 These following steps use fdisk, but any partitioning software will do.
@@ -977,10 +1013,10 @@ enter -- use default (second partition)
 enter -- use default (defautl starting position
 enter -- use default (any remaining space is added to the partition)
 t -- change partition type
-1 -- first partition (boot)
+1 -- first partition 
 6 -- Fat16 partition
 t -- change partition t
-2 -- second partition (root)
+2 -- second partition 
 83 -- Linux partition
 \end{lstlisting}
 
@@ -992,12 +1028,9 @@ Device & Boot & Start & End & Sectors & Size & Id & Type \\
 /dev/sdb2  &   & 133120 & 15130623 & 14997504 & 7,2G & 83 & Linux \\
 \end{tabular}
 
-If the partition table looks correct, you can write the results by entering \cmd{w}. You may need to run partprobe so that the kernel sees the new partitions.
+If the partition table looks correct, you can write the results by entering \cmd{w}. You may need to run \cmd{partprobe} so that the kernel sees the new partitions.
 
-\end{enumerate}
-
-
-After the disk has been partitioned, file systems must be created on the card
+\item After the disk has been partitioned, file systems must be created on the card
 
 \begin{lstlisting}
 sudo mkfs.fat /dev/sdX1
@@ -1005,12 +1038,13 @@ sudo mkfs.ext4 /dev/sdX2
 \end{lstlisting}
 
 Where \cmd{/dev/sdX} once again is the SD-card device file
+\end{enumerate}
 
 \subsection{Debian for Beaglebone Black}
 
-Unlike other devices, Beaglebone Black uses its support image over nfs. This is due to an effort to minimize single point of failures, as USB-sticks have been known to fail due to frequent power cuts. 
+Unlike other devices, Beaglebone Black uses its support image over nfs. This is due to an effort to minimize single point of failures, as USB-sticks have been known to fail due to frequent power cuts.
 
-The following steps can be run on either personal computer or the testing harness, as long as the resulting root filesystem directory is copied to testing harness with appropriate ownership. The steps however assume that the commands are run on the testing harness as root. Adjust paths and add sudos when necessary.
+The following steps can be run on either personal computer or the testing harness, as long as the resulting root filesystem directory is copied to testing harness with appropriate ownership. The steps however assume that the commands are run on the testing harness as root. Adjust paths and add sudos where necessary.
 
 
 \begin{enumerate}
