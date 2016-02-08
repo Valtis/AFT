@@ -1,6 +1,8 @@
-# Copyright (c) 2013-2015 Intel, Inc.
+# coding=utf-8
+# Copyright (c) 2013-2016 Intel, Inc.
 # Author Igor Stoppa <igor.stoppa@intel.com>
 # Author Topi Kuutela <topi.kuutela@intel.com>
+# Author Erkka Kääriä <erkka.kaaria@intel.com>
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -27,6 +29,18 @@ from aft.cutter import Cutter
 class ClewareCutter(Cutter):
     """
     Wrapper for controlling cutters from Cleware Gmbh.
+
+    Attributes:
+        _RETRIES (integer):
+            Number of retries in case of failure
+        _MIN_SLEEP_DURATION (integer):
+            Minimum amount of time between retry attempts
+        _MAX_SLEEP_DURATION (integer):
+            Maximum amount of time between retry attempts
+        _POWER_ON (str):
+            The string passed to clewarecontrol to turn the device on
+        _POWER_OFF (str):
+            The string passed to clewarecontrol to turn the device off
     """
 
 
@@ -81,8 +95,8 @@ class ClewareCutter(Cutter):
         times.
 
         Args:
-            power_status (string): Either "0", or "1" to turn power off and on
-                          respectively
+            power_status (string):
+                Either "0", or "1" to turn power off and on respectively
 
         Returns:
             None

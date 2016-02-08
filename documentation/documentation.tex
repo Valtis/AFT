@@ -920,7 +920,7 @@ The USB-serial interface can be used for boot console recording at 115200 bauds.
 	\centering
 	\includegraphics[width=\linewidth]{edisonwire3.jpg}
 	
-	3. Strip the wire, solder small beads of tin on the tips.
+	3. Strip the wire, solder small beads of tin on the tips and    flatten the beads with pliers or similar tool.
 	Cover the cut with electrical tape.
 	\end{minipage}
 	\begin{minipage}[c][0.5\textheight][t]{0.49\textwidth}
@@ -1042,7 +1042,7 @@ Where \cmd{/dev/sdX} once again is the SD-card device file
 
 \subsection{Debian for Beaglebone Black}
 
-Unlike other devices, Beaglebone Black uses its support image over nfs. This is due to an effort to minimize single point of failures, as USB-sticks have been known to fail due to frequent power cuts.
+Unlike other devices, Beaglebone Black uses its support image over nfs. This is due to an effort to minimize single point of failures, as USB-sticks have been known to fail due to frequent power cuts. There is also the added benefit that upgrading the support 
 
 The following steps can be run on either personal computer or the testing harness, as long as the resulting root filesystem directory is copied to testing harness with appropriate ownership. The steps however assume that the commands are run on the testing harness as root. Adjust paths and add sudos where necessary.
 
@@ -1121,7 +1121,7 @@ The change in \cmd{/etc/exports} changes the nfs from read-only to read/write. T
 \subsection{Booting to the service mode}
 \label{bbbboot}
 
-
+Normally there is little need to enter the service mode manually, but the steps are listed here in case a reason emerges.
 
 \begin{enumerate}
 \item Open screen

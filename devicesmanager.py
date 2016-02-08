@@ -1,6 +1,8 @@
-# Copyright (c) 2013-2015 Intel, Inc.
+# coding=utf-8
+# Copyright (c) 2013-2016 Intel, Inc.
 # Author Igor Stoppa <igor.stoppa@intel.com>
 # Author Topi Kuutela <topi.kuutela@intel.com>
+# Author Erkka Kääriä <erkka.kaaria@intel.com>
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -35,8 +37,14 @@ class DevicesManager(object):
     # args = parsed command line arguments
     def __init__(self, args):
         """
+        Constructor
+
         Based on command-line arguments and configuration files, construct
         configurations
+
+        Args:
+            args (argparse namespace argument object):
+                Command line arguments, as parsed by argparse
         """
 
         self._args = args
@@ -137,7 +145,7 @@ class DevicesManager(object):
 
         devices = []
         for device_config in self.device_configs:
-            if device_config["name"] == machine_name:
+            if device_config["name"].lower() == machine_name.lower():
                 cutter = devicefactory.build_cutter(device_config["settings"])
                 device = devicefactory.build_device(device_config["settings"], cutter)
                 devices.append(device)
