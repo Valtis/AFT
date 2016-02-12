@@ -110,7 +110,7 @@ class Device(object):
 
         Returns: None
         """
-        print "Mock implementation"
+        pass
 
 
     def check_poweron(self):
