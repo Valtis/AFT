@@ -37,6 +37,9 @@ class GTestCase(BasicTestCase):
             for line in manifest:
                 line = line.strip()
                 logger.debug("Read line: " + line)
+                if len(line) == 0:
+                    logger.debug("Empty line - skipping")
+                    continue
                 if line.startswith("#"):
                     logger.debug("Starts with '#', is comment - skipping")
                     continue
