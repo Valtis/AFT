@@ -20,6 +20,7 @@ to any implementation details.
 """
 
 from aft.testcases.basictestcase import BasicTestCase
+from aft.logger import Logger as logger
 
 class GTestCase(BasicTestCase):
     def __init__(self, config):
@@ -32,13 +33,17 @@ class GTestCase(BasicTestCase):
 
         # test manifest contains the list of tests that should be executed.
         with open(self.test_manifest) as manifest:
+
             for line in manifest:
                 line = line.strip()
-
+                logger.debug("Read line: " + line)
                 if line.startswith("#"):
+                    logger.debug("Starts with '#', is comment - skipping")
                     continue
                 self.parameters = param + " -n " + line
+                logger.debug("Running local command with following parameters: " + self.parameters)
                 self.run_local_command()
+                logger.debug("Success status: " + str(self._success()))
                 success = success and self._success()
 
         return success
